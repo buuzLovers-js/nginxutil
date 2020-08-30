@@ -7,6 +7,8 @@ usage()
     echo -e "\tadd --name <name> --type <type> --location <location> --port <port>"
     echo -e "\tedit <name>"
     echo -e "\tlist"
+    echo -e "\treload"
+    echo -e "\tremove <name>"
 }
 
 case $1 in
