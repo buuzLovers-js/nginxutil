@@ -46,9 +46,8 @@ case $1 in
         
         sudo cp -i $path/examples/$type $path/sites-enabled/$name && echo "Copying example file..."
         sudo sed -e "s/{{location}}/$location/; s/{{port}}/$port/" -i $path/sites-enabled/$name && echo "Replacing placeholders..."
-        
-        # nginx -s reload
-        echo "DONE"
+        echo "Restarting nginx"
+        docker restart nginx && echo "DONE"
         ;;
     edit )
         shift
@@ -64,7 +63,7 @@ case $1 in
         done
         ;;
     reload )
-        echo "Reloading nginx..."
+        echo "Restarting nginx..."
         docker restart nginx && echo "DONE"
         ;;
     remove )
