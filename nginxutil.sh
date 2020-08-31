@@ -35,7 +35,7 @@ usage()
 restartNginx()
 {
     echo "Restarting NGINX"
-    # eval "$NGINX_RESTART_CMD" && echo "Complete!"
+    eval "$NGINX_RESTART_CMD" && echo "Complete!"
 }
 
 case $1 in
@@ -52,18 +52,20 @@ case $1 in
         fi
 
         echo "Copying example file..."
-        cp -i $NGINX_ROOT/templates/$type.example $NGINX_ROOT/sites-enabled/$name
+        cp -i $NGINX_ROOT/templates/$type.example $NGINX_ROOT/sites-enabled/$name.conf
 
         echo "Replacing placeholders..."
         rules=""
         while [ "$1" != "" ]; do
             values=($(echo $1 | tr '=' "\n")) # Split "key=value" into array (key, value)
-            rules="${rules}s/{{${values[0]}}}/${values[1]}/g;" # Append new rule to "rules" variable
+            escapedValue=$(echo ${values[1]} | sed 's/\//\\\//g')
+            rules="${rules}s/{{${values[0]}}}/$escapedValue/g;" # Append new rule to "rules" variable
             shift
         done
 
         rules="${rules}s/{{name}}/$name/g" # Append {{name}} replacer to the end
-        sed -z $rules -i $NGINX_ROOT/sites-enabled/$name
+        echo "$rules"
+        sed -z $rules -i $NGINX_ROOT/sites-enabled/$name.conf
         
         if [ -z "$type" ] || [ -z "$name" ]
         then
