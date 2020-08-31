@@ -1,76 +1,115 @@
-#!/bin/bash
-path="/home/hackathon/docker/nginx"
+#!/usr/bin/env bash
+NGINX_ROOT="/home/hackathon/docker/nginx"
+NGINX_RESTART_CMD="docker restart nginx"
 
 usage()
 {
+    echo "nginxutil v0.1 by buuzlovers team"
     echo "Usage:"
-    echo -e "\tadd --name <name> --type <type> --location <location> --port <port>"
+    echo -e "\tadd <name> <type> <key=value...>"
+    echo -e "\t\tGenerate a new config"
+
+    echo -e "\tvars <type>"
+    echo -e "\t\tShow all variables in <type> config"
+
+    echo -e "\ttypes"
+    echo -e "\t\tShow available templates"
+
     echo -e "\tedit <name>"
+    echo -e "\t\tEdit a config with default editor ($EDITOR)"
+
     echo -e "\tlist"
+    echo -e "\t\tList active configs"
+
     echo -e "\treload"
+    echo -e "\t\tRestart NGINX"
+
     echo -e "\tremove <name>"
+    echo -e "\t\tRemove a config"
+
+    echo -e "\thelp"
+    echo -e "\t\tShow usage"
+
+}
+
+restartNginx()
+{
+    echo "Restarting NGINX"
+    # eval "$NGINX_RESTART_CMD" && echo "Complete!"
 }
 
 case $1 in
     add )
         shift
+        name=$1
+        shift
+        type=$1
+        shift
+
+        if [ ! -f $NGINX_ROOT/templates/$type.example ]; then
+            echo "Config example \"$type\" was not found in $NGINX_ROOT/templates/."
+            exit
+        fi
+
+        echo "Copying example file..."
+        cp -i $NGINX_ROOT/templates/$type.example $NGINX_ROOT/sites-enabled/$name
+
+        echo "Replacing placeholders..."
+        rules=""
         while [ "$1" != "" ]; do
-            case $1 in
-                -t | --type )
-                    shift
-                    type=$1
-                    ;;
-                -n | --name )
-                    shift
-                    name=$1
-                    ;;
-                -l | --location )
-                    shift
-                    location=$1
-                    ;;
-                -p | --port )
-                    shift
-                    port=$1
-                    ;;
-                * )
-                    usage
-                    exit 1
-                    ;;
-            esac
+            values=($(echo $1 | tr '=' "\n")) # Split "key=value" into array (key, value)
+            rules="${rules}s/{{${values[0]}}}/${values[1]}/g;" # Append new rule to "rules" variable
             shift
         done
+
+        rules="${rules}s/{{name}}/$name/g" # Append {{name}} replacer to the end
+        sed -z $rules -i $NGINX_ROOT/sites-enabled/$name
         
-        if [ -z "$type" ] || [ -z "$name" ] || [ -z "$location" ] || [ -z "$port" ]
+        if [ -z "$type" ] || [ -z "$name" ]
         then
             usage
             exit 1
         fi
-        
-        sudo cp -i $path/examples/$type $path/sites-enabled/$name && echo "Copying example file..."
-        sudo sed -e "s/{{location}}/$location/; s/{{port}}/$port/" -i $path/sites-enabled/$name && echo "Replacing placeholders..."
-        echo "Restarting nginx"
-        docker restart nginx && echo "DONE"
+
+        restartNginx
+        ;;
+    vars )
+        shift
+        type=$1
+
+        if [ ! -f $NGINX_ROOT/templates/$type.example ]; then
+            echo "Config example \"$type\" was not found in $NGINX_ROOT/templates/."
+            exit
+        fi
+
+        echo "Variables in \"$type\":"
+        cat $NGINX_ROOT/templates/$type.example | grep -oP "{{.+}}"
+        ;;
+    types )
+        echo "Available templates:"
+        ls $NGINX_ROOT/templates/ | sed "s/.example//"
         ;;
     edit )
         shift
         echo "Opening $EDITOR..."
-        sudo $EDITOR $path/sites-enabled/$1
+        $EDITOR $NGINX_ROOT/sites-enabled/$1
+        restartNginx
         ;;
     list )
         echo "Config list:"
         
-        array=($(ls -1 $path/sites-enabled -I "*.*"))        
+        array=($(ls -1 $NGINX_ROOT/sites-enabled -I "*.*"))        
         for config in ${array[@]}; do
             echo -e "\t$config"
         done
         ;;
     reload )
-        echo "Restarting nginx..."
-        docker restart nginx && echo "DONE"
+        restartNginx
         ;;
     remove )
         echo "Removing $2..."
-        sudo rm $path/sites-enabled/$2 && echo "$2 is GONE!!!"
+        rm $NGINX_ROOT/sites-enabled/$2 && echo "$2 is GONE!!!"
+        restartNginx
         ;;
     * )
         usage
