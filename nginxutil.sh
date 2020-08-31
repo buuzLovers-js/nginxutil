@@ -94,7 +94,7 @@ case $1 in
     edit )
         shift
         echo "Opening $EDITOR..."
-        $EDITOR $NGINX_ROOT/sites-enabled/$1
+        $EDITOR $NGINX_ROOT/sites-enabled/$1.conf
         restartNginx
         ;;
     list )
@@ -110,7 +110,7 @@ case $1 in
         ;;
     remove )
         echo "Removing $2..."
-        rm $NGINX_ROOT/sites-enabled/$2 && echo "$2 is GONE!!!"
+        rm $NGINX_ROOT/sites-enabled/$2.conf && echo "$2 is GONE!!!"
         restartNginx
         ;;
     * )
